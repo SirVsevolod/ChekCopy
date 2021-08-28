@@ -4,11 +4,23 @@ import win32api
 import xlsxwriter
 
 
+def GetExceptions():
+    exception = []
+    Path = input('Введите путь к файлу исключений: ')
+    file = open(Path, 'r')
+    for line in  file:
+        exception.append(line[0:-1])
+    file.close()
+    return exception
+
 
 def get_file_metadata(path, filename, metadata):
     sh = win32com.client.gencache.EnsureDispatch('Shell.Application', 0)
+    #print(dir(sh))
     ns = sh.NameSpace(path)
-
+    #print(dir(ns))
+    #signer = ns.Signer
+    #print(signer.Certificate.IssuerName, signer.Certificate.SerialNumber)
     # Enumeration is necessary because ns.GetDetailsOf only accepts an integer as 2nd argument
     file_metadata = dict()
     item = ns.ParseName(str(filename))
@@ -69,7 +81,7 @@ def CheckCopyright(path, metadata, copyright,):
                 if meta_data['Copyright'] != copyright:
                     result.append({'path': i[0] + '\\' + file,
                                    'copyright': meta_data['Copyright'],
-                                   'company': meta_data['Company']})
+                                   'company': meta_data['Owner']})
     return result
 
 
@@ -81,9 +93,11 @@ def CheckAssembly(path, version,):
         for file in i[2]:
             file_name, file_extension = os.path.splitext(i[0] + file)
             if file_extension in ('.exe', '.dll', '.drx'):
+                print(i[0] + '\\' + file)
                 fixedInfo = win32api.GetFileVersionInfo(i[0] + '\\' + file, '\\')
-                print(file)
                 print(fixedInfo)
+                result.append({"Path": i[0] + file,
+                               })
 
     return result
 
@@ -120,6 +134,8 @@ def WriteResult(DS, CO, CC):
 
 if __name__ == "__main__":
     #inputs
+    exceptions = GetExceptions()
+    print(exceptions)
     metadata = ['Name', 'Size', 'Item type', 'Date modified', 'Date created', 'Date accessed', 'Attributes', 'Offline status', 'Availability', 'Perceived type', 'Owner', 'Kind', 'Date taken', 'Contributing artists', 'Album', 'Year', 'Genre', 'Conductors', 'Tags', 'Rating', 'Authors', 'Title', 'Subject', 'Categories', 'Comments', 'Copyright', '#', 'Length', 'Bit rate', 'Protected', 'Camera model', 'Dimensions', 'Camera maker', 'Company', 'File description', 'Masters keywords', 'Masters keywords']
     Path = input("Введите путь: ")
     owner = input("Владелец цифровой подписи: ")
@@ -129,6 +145,6 @@ if __name__ == "__main__":
     DS = DigitalSignature(Path, metadata)
     CO = CheckOwner(Path,metadata, owner)
     CC = CheckCopyright(Path, metadata, copyright)
-    #CheckAssembly(Path, assembly)
+    #CA = CheckAssembly(Path, assembly)
 
     WriteResult(DS, CO, CC)
